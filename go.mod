@@ -4,6 +4,7 @@ go 1.21.0
 
 require (
 	github.com/ServiceWeaver/weaver v0.19.0
+	github.com/google/go-cmp v0.5.9
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/trace v1.16.0
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1

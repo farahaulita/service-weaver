@@ -18,11 +18,21 @@ type Searcher interface{
 // sesuai dokumentasi menambah komponen service weaver
 type searcher struct{
 	weaver.Implements[Searcher]
+	cache weaver.Ref[Cache]
 }
 
 // sesuai dokumentasi menambah komponen service weaver, return dan input disesuaikan
 func (s * searcher) Search(ctx context.Context, query string) ([]string,error) {
 	s.Logger(ctx).Debug("Search", "query",query)
+
+	if emojis, err:= s.cache.Get().Get(ctx,query); err !=nil {
+		s.Logger(ctx).Error("cache.Get","query",query, "err", err)
+	} else if len(emojis) > 0{
+		return emojis, nil
+	}
+
+	
+	
 	// change to lowercase
 	words := strings.Fields(strings.ToLower(query))
 
@@ -39,6 +49,10 @@ func (s * searcher) Search(ctx context.Context, query string) ([]string,error) {
 	// sort for better results
 	sort.Strings(results)
 	// nil is the error
+
+	if err := s.cache.Get().Put(ctx,query,results); err != nil{
+		s.Logger(ctx).Error("cache.Put","query",query, "err", err)
+	}
 	return results, nil
 }
 

@@ -3,9 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	_"embed"
+	"encoding/json"
+	"net/http"
 	
 	"github.com/ServiceWeaver/weaver"
 )
+var indexHtml string
 
 func main(){
 	if err := weaver.Run(context.Background(), run); err != nil{
@@ -16,16 +20,44 @@ func main(){
 type app struct{
 	weaver.Implements[weaver.Main]
 	// Add searcher component
-	searcher weaver.Ref[Searcher]
+	searcher weaver.Ref[Searcher] 
+	// Add a Listener
+	lis  	 weaver.Listener `weaver:"emojis"`
 }
 
 func run(ctx context.Context, a *app) error {
-	// modify to print out  emojis
-	emojis, err := a.searcher.Get().Search(ctx,"pig")
-	if err != nil {
-		return err
-	}
-	fmt.Println(emojis)
 
-	return nil
+	a.Logger(ctx).Info("emojis listener available.", "addr", a.lis)
+	// run implements
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request){
+		if r.URL.Path != "/"{
+			http.NotFound(w,r)
+			return
+		}
+		fmt.Fprint(w,indexHtml)
+	})
+
+	http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request){
+		// search function
+		query := r.URL.Query().Get("q")
+		emojis, err := a.searcher.Get().Search(r.Context(), query)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// JSON
+		bytes, err := json.Marshal(emojis)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+			}
+
+
+		fmt.Fprintln(w, string(bytes))
+	})
+
+	
+
+	return http.Serve(a.lis, nil)
 }

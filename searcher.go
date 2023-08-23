@@ -22,6 +22,7 @@ type searcher struct{
 
 // sesuai dokumentasi menambah komponen service weaver, return dan input disesuaikan
 func (s * searcher) Search(ctx context.Context, query string) ([]string,error) {
+	s.Logger(ctx).Debug("Search", "query",query)
 	// change to lowercase
 	words := strings.Fields(strings.ToLower(query))
 

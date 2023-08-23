@@ -7,6 +7,11 @@ import(
 
 )
 // Making cache
+
+type cacheRouter struct{}
+func (cacheRouter) Get(_ context.Context, query string) string {return query}
+func (cacheRouter) Put(_ context.Context, query string, _ []string) string {return query}
+
 type Cache interface {
 	// Utk return emoji di cahce dari query yang diberikan
 	Get(context.Context, string) ([]string, error)
@@ -15,10 +20,12 @@ type Cache interface {
 	Put(context.Context, string, []string) error
 }
 
+
+
 //implementasi
 type cache struct {
 	weaver.Implements[Cache]
-
+	weaver.WithRouter[cacheRouter]
 	mu	sync.Mutex
 	emojis map[string][]string
 

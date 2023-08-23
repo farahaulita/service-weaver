@@ -35,9 +35,10 @@ please file an issue at https://github.com/ServiceWeaver/weaver/issues.
 
 func init() {
 	codegen.Register(codegen.Registration{
-		Name:  "emojis/Cache",
-		Iface: reflect.TypeOf((*Cache)(nil)).Elem(),
-		Impl:  reflect.TypeOf(cache{}),
+		Name:   "emojis/Cache",
+		Iface:  reflect.TypeOf((*Cache)(nil)).Elem(),
+		Impl:   reflect.TypeOf(cache{}),
+		Routed: true,
 		LocalStubFn: func(impl any, caller string, tracer trace.Tracer) any {
 			return cache_local_stub{impl: impl.(Cache), tracer: tracer, getMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "emojis/Cache", Method: "Get", Remote: false}), putMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "emojis/Cache", Method: "Put", Remote: false})}
 		},
@@ -86,9 +87,13 @@ var _ weaver.InstanceOf[weaver.Main] = (*app)(nil)
 var _ weaver.InstanceOf[Searcher] = (*searcher)(nil)
 
 // weaver.Router checks.
-var _ weaver.Unrouted = (*cache)(nil)
+var _ weaver.RoutedBy[cacheRouter] = (*cache)(nil)
 var _ weaver.Unrouted = (*app)(nil)
 var _ weaver.Unrouted = (*searcher)(nil)
+
+// Component "cache", router "cacheRouter" checks.
+var _ func(_ context.Context, query string) string = (&cacheRouter{}).Get             // routed
+var _ func(_ context.Context, query string, _ []string) string = (&cacheRouter{}).Put // routed
 
 // Local stub implementations.
 
@@ -227,7 +232,10 @@ func (s cache_client_stub) Get(ctx context.Context, a0 string) (r0 []string, err
 
 	// Encode arguments.
 	enc.String(a0)
-	var shardKey uint64
+
+	// Set the shardKey.
+	var r cacheRouter
+	shardKey := _hashCache(r.Get(ctx, a0))
 
 	// Call the remote method.
 	requestBytes = len(enc.Data())
@@ -279,7 +287,10 @@ func (s cache_client_stub) Put(ctx context.Context, a0 string, a1 []string) (err
 	enc := codegen.NewEncoder()
 	enc.String(a0)
 	serviceweaver_enc_slice_string_4af10117(enc, a1)
-	var shardKey uint64
+
+	// Set the shardKey.
+	var r cacheRouter
+	shardKey := _hashCache(r.Put(ctx, a0, a1))
 
 	// Call the remote method.
 	requestBytes = len(enc.Data())
@@ -402,6 +413,8 @@ func (s cache_server_stub) get(ctx context.Context, args []byte) (res []byte, er
 	dec := codegen.NewDecoder(args)
 	var a0 string
 	a0 = dec.String()
+	var r cacheRouter
+	s.addLoad(_hashCache(r.Get(ctx, a0)), 1.0)
 
 	// TODO(rgrandl): The deferred function above will recover from panics in the
 	// user code: fix this.
@@ -429,6 +442,8 @@ func (s cache_server_stub) put(ctx context.Context, args []byte) (res []byte, er
 	a0 = dec.String()
 	var a1 []string
 	a1 = serviceweaver_dec_slice_string_4af10117(dec)
+	var r cacheRouter
+	s.addLoad(_hashCache(r.Put(ctx, a0, a1)), 1.0)
 
 	// TODO(rgrandl): The deferred function above will recover from panics in the
 	// user code: fix this.
@@ -498,6 +513,22 @@ func (s searcher_server_stub) search(ctx context.Context, args []byte) (res []by
 	serviceweaver_enc_slice_string_4af10117(enc, r0)
 	enc.Error(appErr)
 	return enc.Data(), nil
+}
+
+// Router methods.
+
+// _hashCache returns a 64 bit hash of the provided value.
+func _hashCache(r string) uint64 {
+	var h codegen.Hasher
+	h.WriteString(string(r))
+	return h.Sum64()
+}
+
+// _orderedCodeCache returns an order-preserving serialization of the provided value.
+func _orderedCodeCache(r string) codegen.OrderedCode {
+	var enc codegen.OrderedEncoder
+	enc.WriteString(string(r))
+	return enc.Encode()
 }
 
 // Encoding/decoding implementations.

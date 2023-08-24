@@ -34,6 +34,24 @@ func init() {
 		RefData: "",
 	})
 	codegen.Register(codegen.Registration{
+		Name:  "emojis/ChatGPT",
+		Iface: reflect.TypeOf((*ChatGPT)(nil)).Elem(),
+		Impl:  reflect.TypeOf(chatGPT{}),
+		LocalStubFn: func(impl any, caller string, tracer trace.Tracer) any {
+			return chatGPT_local_stub{impl: impl.(ChatGPT), tracer: tracer, completeMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "emojis/ChatGPT", Method: "Complete", Remote: false})}
+		},
+		ClientStubFn: func(stub codegen.Stub, caller string) any {
+			return chatGPT_client_stub{stub: stub, completeMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "emojis/ChatGPT", Method: "Complete", Remote: true})}
+		},
+		ServerStubFn: func(impl any, addLoad func(uint64, float64)) codegen.Server {
+			return chatGPT_server_stub{impl: impl.(ChatGPT), addLoad: addLoad}
+		},
+		ReflectStubFn: func(caller func(string, context.Context, []any, []any) error) any {
+			return chatGPT_reflect_stub{caller: caller}
+		},
+		RefData: "",
+	})
+	codegen.Register(codegen.Registration{
 		Name:      "github.com/ServiceWeaver/weaver/Main",
 		Iface:     reflect.TypeOf((*weaver.Main)(nil)).Elem(),
 		Impl:      reflect.TypeOf(app{}),
@@ -55,10 +73,10 @@ func init() {
 		Iface: reflect.TypeOf((*Searcher)(nil)).Elem(),
 		Impl:  reflect.TypeOf(searcher{}),
 		LocalStubFn: func(impl any, caller string, tracer trace.Tracer) any {
-			return searcher_local_stub{impl: impl.(Searcher), tracer: tracer, searchMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "emojis/Searcher", Method: "Search", Remote: false})}
+			return searcher_local_stub{impl: impl.(Searcher), tracer: tracer, searchMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "emojis/Searcher", Method: "Search", Remote: false}), searchChatGPTMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "emojis/Searcher", Method: "SearchChatGPT", Remote: false})}
 		},
 		ClientStubFn: func(stub codegen.Stub, caller string) any {
-			return searcher_client_stub{stub: stub, searchMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "emojis/Searcher", Method: "Search", Remote: true})}
+			return searcher_client_stub{stub: stub, searchMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "emojis/Searcher", Method: "Search", Remote: true}), searchChatGPTMetrics: codegen.MethodMetricsFor(codegen.MethodLabels{Caller: caller, Component: "emojis/Searcher", Method: "SearchChatGPT", Remote: true})}
 		},
 		ServerStubFn: func(impl any, addLoad func(uint64, float64)) codegen.Server {
 			return searcher_server_stub{impl: impl.(Searcher), addLoad: addLoad}
@@ -66,17 +84,19 @@ func init() {
 		ReflectStubFn: func(caller func(string, context.Context, []any, []any) error) any {
 			return searcher_reflect_stub{caller: caller}
 		},
-		RefData: "⟦e0ea07ba:wEaVeReDgE:emojis/Searcher→emojis/Cache⟧\n",
+		RefData: "⟦e0ea07ba:wEaVeReDgE:emojis/Searcher→emojis/Cache⟧\n⟦92032889:wEaVeReDgE:emojis/Searcher→emojis/ChatGPT⟧\n",
 	})
 }
 
 // weaver.InstanceOf checks.
 var _ weaver.InstanceOf[Cache] = (*cache)(nil)
+var _ weaver.InstanceOf[ChatGPT] = (*chatGPT)(nil)
 var _ weaver.InstanceOf[weaver.Main] = (*app)(nil)
 var _ weaver.InstanceOf[Searcher] = (*searcher)(nil)
 
 // weaver.Router checks.
 var _ weaver.RoutedBy[cacheRouter] = (*cache)(nil)
+var _ weaver.Unrouted = (*chatGPT)(nil)
 var _ weaver.Unrouted = (*app)(nil)
 var _ weaver.Unrouted = (*searcher)(nil)
 
@@ -136,6 +156,35 @@ func (s cache_local_stub) Put(ctx context.Context, a0 string, a1 []string) (err 
 	return s.impl.Put(ctx, a0, a1)
 }
 
+type chatGPT_local_stub struct {
+	impl            ChatGPT
+	tracer          trace.Tracer
+	completeMetrics *codegen.MethodMetrics
+}
+
+// Check that chatGPT_local_stub implements the ChatGPT interface.
+var _ ChatGPT = (*chatGPT_local_stub)(nil)
+
+func (s chatGPT_local_stub) Complete(ctx context.Context, a0 string) (r0 string, err error) {
+	// Update metrics.
+	begin := s.completeMetrics.Begin()
+	defer func() { s.completeMetrics.End(begin, err != nil, 0, 0) }()
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		// Create a child span for this method.
+		ctx, span = s.tracer.Start(ctx, "main.ChatGPT.Complete", trace.WithSpanKind(trace.SpanKindInternal))
+		defer func() {
+			if err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+			}
+			span.End()
+		}()
+	}
+
+	return s.impl.Complete(ctx, a0)
+}
+
 type main_local_stub struct {
 	impl   weaver.Main
 	tracer trace.Tracer
@@ -145,9 +194,10 @@ type main_local_stub struct {
 var _ weaver.Main = (*main_local_stub)(nil)
 
 type searcher_local_stub struct {
-	impl          Searcher
-	tracer        trace.Tracer
-	searchMetrics *codegen.MethodMetrics
+	impl                 Searcher
+	tracer               trace.Tracer
+	searchMetrics        *codegen.MethodMetrics
+	searchChatGPTMetrics *codegen.MethodMetrics
 }
 
 // Check that searcher_local_stub implements the Searcher interface.
@@ -171,6 +221,26 @@ func (s searcher_local_stub) Search(ctx context.Context, a0 string) (r0 []string
 	}
 
 	return s.impl.Search(ctx, a0)
+}
+
+func (s searcher_local_stub) SearchChatGPT(ctx context.Context, a0 string) (r0 []string, err error) {
+	// Update metrics.
+	begin := s.searchChatGPTMetrics.Begin()
+	defer func() { s.searchChatGPTMetrics.End(begin, err != nil, 0, 0) }()
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		// Create a child span for this method.
+		ctx, span = s.tracer.Start(ctx, "main.Searcher.SearchChatGPT", trace.WithSpanKind(trace.SpanKindInternal))
+		defer func() {
+			if err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+			}
+			span.End()
+		}()
+	}
+
+	return s.impl.SearchChatGPT(ctx, a0)
 }
 
 // Client stub implementations.
@@ -297,6 +367,70 @@ func (s cache_client_stub) Put(ctx context.Context, a0 string, a1 []string) (err
 	return
 }
 
+type chatGPT_client_stub struct {
+	stub            codegen.Stub
+	completeMetrics *codegen.MethodMetrics
+}
+
+// Check that chatGPT_client_stub implements the ChatGPT interface.
+var _ ChatGPT = (*chatGPT_client_stub)(nil)
+
+func (s chatGPT_client_stub) Complete(ctx context.Context, a0 string) (r0 string, err error) {
+	// Update metrics.
+	var requestBytes, replyBytes int
+	begin := s.completeMetrics.Begin()
+	defer func() { s.completeMetrics.End(begin, err != nil, requestBytes, replyBytes) }()
+
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		// Create a child span for this method.
+		ctx, span = s.stub.Tracer().Start(ctx, "main.ChatGPT.Complete", trace.WithSpanKind(trace.SpanKindClient))
+	}
+
+	defer func() {
+		// Catch and return any panics detected during encoding/decoding/rpc.
+		if err == nil {
+			err = codegen.CatchPanics(recover())
+			if err != nil {
+				err = errors.Join(weaver.RemoteCallError, err)
+			}
+		}
+
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+
+	}()
+
+	// Preallocate a buffer of the right size.
+	size := 0
+	size += (4 + len(a0))
+	enc := codegen.NewEncoder()
+	enc.Reset(size)
+
+	// Encode arguments.
+	enc.String(a0)
+	var shardKey uint64
+
+	// Call the remote method.
+	requestBytes = len(enc.Data())
+	var results []byte
+	results, err = s.stub.Run(ctx, 0, enc.Data(), shardKey)
+	replyBytes = len(results)
+	if err != nil {
+		err = errors.Join(weaver.RemoteCallError, err)
+		return
+	}
+
+	// Decode the results.
+	dec := codegen.NewDecoder(results)
+	r0 = dec.String()
+	err = dec.Error()
+	return
+}
+
 type main_client_stub struct {
 	stub codegen.Stub
 }
@@ -305,8 +439,9 @@ type main_client_stub struct {
 var _ weaver.Main = (*main_client_stub)(nil)
 
 type searcher_client_stub struct {
-	stub          codegen.Stub
-	searchMetrics *codegen.MethodMetrics
+	stub                 codegen.Stub
+	searchMetrics        *codegen.MethodMetrics
+	searchChatGPTMetrics *codegen.MethodMetrics
 }
 
 // Check that searcher_client_stub implements the Searcher interface.
@@ -355,6 +490,62 @@ func (s searcher_client_stub) Search(ctx context.Context, a0 string) (r0 []strin
 	requestBytes = len(enc.Data())
 	var results []byte
 	results, err = s.stub.Run(ctx, 0, enc.Data(), shardKey)
+	replyBytes = len(results)
+	if err != nil {
+		err = errors.Join(weaver.RemoteCallError, err)
+		return
+	}
+
+	// Decode the results.
+	dec := codegen.NewDecoder(results)
+	r0 = serviceweaver_dec_slice_string_4af10117(dec)
+	err = dec.Error()
+	return
+}
+
+func (s searcher_client_stub) SearchChatGPT(ctx context.Context, a0 string) (r0 []string, err error) {
+	// Update metrics.
+	var requestBytes, replyBytes int
+	begin := s.searchChatGPTMetrics.Begin()
+	defer func() { s.searchChatGPTMetrics.End(begin, err != nil, requestBytes, replyBytes) }()
+
+	span := trace.SpanFromContext(ctx)
+	if span.SpanContext().IsValid() {
+		// Create a child span for this method.
+		ctx, span = s.stub.Tracer().Start(ctx, "main.Searcher.SearchChatGPT", trace.WithSpanKind(trace.SpanKindClient))
+	}
+
+	defer func() {
+		// Catch and return any panics detected during encoding/decoding/rpc.
+		if err == nil {
+			err = codegen.CatchPanics(recover())
+			if err != nil {
+				err = errors.Join(weaver.RemoteCallError, err)
+			}
+		}
+
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.End()
+
+	}()
+
+	// Preallocate a buffer of the right size.
+	size := 0
+	size += (4 + len(a0))
+	enc := codegen.NewEncoder()
+	enc.Reset(size)
+
+	// Encode arguments.
+	enc.String(a0)
+	var shardKey uint64
+
+	// Call the remote method.
+	requestBytes = len(enc.Data())
+	var results []byte
+	results, err = s.stub.Run(ctx, 1, enc.Data(), shardKey)
 	replyBytes = len(results)
 	if err != nil {
 		err = errors.Join(weaver.RemoteCallError, err)
@@ -468,6 +659,49 @@ func (s cache_server_stub) put(ctx context.Context, args []byte) (res []byte, er
 	return enc.Data(), nil
 }
 
+type chatGPT_server_stub struct {
+	impl    ChatGPT
+	addLoad func(key uint64, load float64)
+}
+
+// Check that chatGPT_server_stub implements the codegen.Server interface.
+var _ codegen.Server = (*chatGPT_server_stub)(nil)
+
+// GetStubFn implements the codegen.Server interface.
+func (s chatGPT_server_stub) GetStubFn(method string) func(ctx context.Context, args []byte) ([]byte, error) {
+	switch method {
+	case "Complete":
+		return s.complete
+	default:
+		return nil
+	}
+}
+
+func (s chatGPT_server_stub) complete(ctx context.Context, args []byte) (res []byte, err error) {
+	// Catch and return any panics detected during encoding/decoding/rpc.
+	defer func() {
+		if err == nil {
+			err = codegen.CatchPanics(recover())
+		}
+	}()
+
+	// Decode arguments.
+	dec := codegen.NewDecoder(args)
+	var a0 string
+	a0 = dec.String()
+
+	// TODO(rgrandl): The deferred function above will recover from panics in the
+	// user code: fix this.
+	// Call the local method.
+	r0, appErr := s.impl.Complete(ctx, a0)
+
+	// Encode the results.
+	enc := codegen.NewEncoder()
+	enc.String(r0)
+	enc.Error(appErr)
+	return enc.Data(), nil
+}
+
 type main_server_stub struct {
 	impl    weaver.Main
 	addLoad func(key uint64, load float64)
@@ -497,6 +731,8 @@ func (s searcher_server_stub) GetStubFn(method string) func(ctx context.Context,
 	switch method {
 	case "Search":
 		return s.search
+	case "SearchChatGPT":
+		return s.searchChatGPT
 	default:
 		return nil
 	}
@@ -527,6 +763,31 @@ func (s searcher_server_stub) search(ctx context.Context, args []byte) (res []by
 	return enc.Data(), nil
 }
 
+func (s searcher_server_stub) searchChatGPT(ctx context.Context, args []byte) (res []byte, err error) {
+	// Catch and return any panics detected during encoding/decoding/rpc.
+	defer func() {
+		if err == nil {
+			err = codegen.CatchPanics(recover())
+		}
+	}()
+
+	// Decode arguments.
+	dec := codegen.NewDecoder(args)
+	var a0 string
+	a0 = dec.String()
+
+	// TODO(rgrandl): The deferred function above will recover from panics in the
+	// user code: fix this.
+	// Call the local method.
+	r0, appErr := s.impl.SearchChatGPT(ctx, a0)
+
+	// Encode the results.
+	enc := codegen.NewEncoder()
+	serviceweaver_enc_slice_string_4af10117(enc, r0)
+	enc.Error(appErr)
+	return enc.Data(), nil
+}
+
 // Reflect stub implementations.
 
 type cache_reflect_stub struct {
@@ -546,6 +807,18 @@ func (s cache_reflect_stub) Put(ctx context.Context, a0 string, a1 []string) (er
 	return
 }
 
+type chatGPT_reflect_stub struct {
+	caller func(string, context.Context, []any, []any) error
+}
+
+// Check that chatGPT_reflect_stub implements the ChatGPT interface.
+var _ ChatGPT = (*chatGPT_reflect_stub)(nil)
+
+func (s chatGPT_reflect_stub) Complete(ctx context.Context, a0 string) (r0 string, err error) {
+	err = s.caller("Complete", ctx, []any{a0}, []any{&r0})
+	return
+}
+
 type main_reflect_stub struct {
 	caller func(string, context.Context, []any, []any) error
 }
@@ -562,6 +835,11 @@ var _ Searcher = (*searcher_reflect_stub)(nil)
 
 func (s searcher_reflect_stub) Search(ctx context.Context, a0 string) (r0 []string, err error) {
 	err = s.caller("Search", ctx, []any{a0}, []any{&r0})
+	return
+}
+
+func (s searcher_reflect_stub) SearchChatGPT(ctx context.Context, a0 string) (r0 []string, err error) {
+	err = s.caller("SearchChatGPT", ctx, []any{a0}, []any{&r0})
 	return
 }
 

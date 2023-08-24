@@ -27,6 +27,8 @@ require (
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/sashabaranov/go-openai v1.14.2 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.42.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.16.0 // indirect

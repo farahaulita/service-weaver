@@ -2,62 +2,63 @@ package main
 
 import (
 	"context"
-	"fmt"
-	_"embed"
+	_ "embed"
 	"encoding/json"
+	"fmt"
 	"net/http"
-	
+
 	"github.com/ServiceWeaver/weaver"
 )
+
 var indexHtml string
 
-func main(){
-	if err := weaver.Run(context.Background(), run); err != nil{
+func main() {
+	if err := weaver.Run(context.Background(), run); err != nil {
 		panic(err)
 	}
 }
 
-type app struct{
+type app struct {
 	weaver.Implements[weaver.Main]
 	// Add searcher component
-	searcher weaver.Ref[Searcher] 
+	searcher weaver.Ref[Searcher]
 	// Add a Listener
-	lis  	 weaver.Listener `weaver:"emojis"`
+	lis weaver.Listener `weaver:"emojis"`
 }
 
 func run(ctx context.Context, a *app) error {
-
 	a.Logger(ctx).Info("emojis listener available.", "addr", a.lis)
-	// run implements
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request){
-		if r.URL.Path != "/"{
-			http.NotFound(w,r)
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
 			return
 		}
-		fmt.Fprint(w,indexHtml)
+		fmt.Fprint(w, indexHtml)
 	})
-
-	http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request){
-		// search function
-		query := r.URL.Query().Get("q")
-		emojis, err := a.searcher.Get().Search(r.Context(), query)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// JSON
-		bytes, err := json.Marshal(emojis)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-			}
-
-
-		fmt.Fprintln(w, string(bytes))
+	http.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
+		a.handleSearch(a.searcher.Get().Search, w, r)
 	})
-
-	
-
+	http.HandleFunc("/search_chatgpt", func(w http.ResponseWriter, r *http.Request) {
+		a.handleSearch(a.searcher.Get().SearchChatGPT, w, r)
+	})
 	return http.Serve(a.lis, nil)
+}
+
+func (a *app) handleSearch(search func(context.Context, string) ([]string, error), w http.ResponseWriter, r *http.Request) {
+	// Search for the list of matching emojis.
+	query := r.URL.Query().Get("q")
+	emojis, err := search(r.Context(), query)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// JSON serialize the results.
+	bytes, err := json.Marshal(emojis)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintln(w, string(bytes))
 }

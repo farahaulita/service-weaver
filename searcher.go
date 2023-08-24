@@ -5,9 +5,20 @@ import (
 	"context"
 	"sort"
 	"strings"
-
+	"github.com/ServiceWeaver/weaver/metrics"
 	"github.com/ServiceWeaver/weaver" 
  	"golang.org/x/exp/slices"
+)
+
+var(
+	cacheHits = metrics.NewCounter(
+		"search_cache hits",
+		"Number of search cache hits",
+	)
+	cacheMisses = metrics.NewCounter(
+		"search_cache misses",
+		"Number of search cache misses",
+	)
 )
 
 // sesuai dokumentasi menambah komponen service weaver, return dan input disesuaikan
@@ -28,7 +39,10 @@ func (s * searcher) Search(ctx context.Context, query string) ([]string,error) {
 	if emojis, err:= s.cache.Get().Get(ctx,query); err !=nil {
 		s.Logger(ctx).Error("cache.Get","query",query, "err", err)
 	} else if len(emojis) > 0{
+		cacheHits.Add(1)
 		return emojis, nil
+	} else{
+		cacheMisses.Add(1)
 	}
 
 	

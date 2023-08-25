@@ -2,7 +2,7 @@
 binary = "./emojis"
 
 ["emojis/ChatGPT"]
-api_key = "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"
+api_key = ""
 
 [single]
 listeners.emojis = {address = "localhost:9000"}

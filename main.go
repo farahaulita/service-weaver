@@ -10,6 +10,7 @@ import (
 	"github.com/ServiceWeaver/weaver"
 )
 
+//go:embed index.html
 var indexHtml string
 
 func main() {
